@@ -31,7 +31,7 @@ from labelme.widgets import LabelListWidgetItem
 from labelme.widgets import ToolBar
 from labelme.widgets import UniqueLabelQListWidget
 from labelme.widgets import ZoomWidget
-from landmarks_detect import auto_call
+from landmarks_detect import detect_2D, detect_3D
 
 # FIXME
 # - [medium] Set max zoom value to something big enough for FitWidth/Window
@@ -1183,11 +1183,29 @@ class MainWindow(QtWidgets.QMainWindow):
 				),
 			)
 			text = ""
-		if text == "detect":
+		if text == "2d":
 			self.labelList.clearSelection()
 			shape = self.canvas.setLastLabel(text, flags)
 			rect = shape.boundingRect()
-			preds = auto_call(self.imagePath, rect.getCoords())
+			preds = detect_2D(self.imagePath, rect.getCoords())
+			if preds != {}:
+				shapes = [{'label': 'jaw_line', 'points': preds['jaw_line'], 'shape_type': 'linestrip', 'flags': {}, 'group_id': None, 'other_data': {}},
+							{'label': 'nose', 'points': preds['nose'], 'shape_type': 'linestrip', 'flags': {}, 'group_id': None, 'other_data': {}},
+							{'label': 'mouth', 'points': preds['mouth'], 'shape_type': 'linestrip', 'flags': {}, 'group_id': None, 'other_data': {}},
+							{'label': 'left_eye', 'points': preds['left_eye'], 'shape_type': 'linestrip', 'flags': {}, 'group_id': None, 'other_data': {}},
+							{'label': 'left_eyebrow', 'points': preds['left_eyebrow'], 'shape_type': 'linestrip', 'flags': {}, 'group_id': None, 'other_data': {}},
+							{'label': 'right_eye', 'points': preds['right_eye'], 'shape_type': 'linestrip', 'flags': {}, 'group_id': None, 'other_data': {}},
+							{'label': 'right_eyebrow', 'points': preds['right_eyebrow'], 'shape_type': 'linestrip', 'flags': {}, 'group_id': None, 'other_data': {}}]
+				self.loadLabels(shapes)
+			self.actions.editMode.setEnabled(True)
+			self.actions.undoLastPoint.setEnabled(False)
+			self.actions.undo.setEnabled(True)
+			self.setDirty()
+		if text == "3d":
+			self.labelList.clearSelection()
+			shape = self.canvas.setLastLabel(text, flags)
+			rect = shape.boundingRect()
+			preds = detect_3D(self.imagePath, rect.getCoords())
 			if preds != {}:
 				shapes = [{'label': 'jaw_line', 'points': preds['jaw_line'], 'shape_type': 'linestrip', 'flags': {}, 'group_id': None, 'other_data': {}},
 							{'label': 'nose', 'points': preds['nose'], 'shape_type': 'linestrip', 'flags': {}, 'group_id': None, 'other_data': {}},
