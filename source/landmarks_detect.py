@@ -4,6 +4,7 @@ import yaml
 import numpy as np
 import mxnet as mx
 from skimage import transform as trans
+from sklearn.neighbors import NearestNeighbors
 from TDDFA_ONNX import TDDFA_ONNX
 
 
@@ -94,24 +95,6 @@ class Handler:
         return out
 
 
-def detect_2D(im_path, bbox=None):
-    # TODO change for 68 landmarks detection
-    handler = Handler(os.path.join('source', '2d106det', '2d106det'), 0)
-    im = cv2.imread(im_path)
-    preds = handler.bbox_get(im, bbox)[0].tolist()
-    if preds == []:
-        return {}
-    new_preds = {'jaw_line': [preds[1]] + preds[9:17] + preds[2:9] + [preds[0]] + preds[24:17:-1] + preds[32:24:-1] + [preds[17]],
-                 'right_eye': [preds[34]] + [preds[33]] + [preds[37]] + [preds[39]] + [preds[42]] + [preds[40]] + [preds[41]] + [preds[35]] + [preds[36]] + [preds[38]],
-                 'right_eyebrow': preds[43:46] + [preds[47]] + [preds[46]] + [preds[50]] + [preds[51]] + [preds[49]] + [preds[48]],
-                 'mouth': [preds[52]] + preds[55:57] + [preds[53]] + [preds[59]] + [preds[58]] + [preds[61]] + [preds[68]] + [preds[67]] + preds[63:65] + [preds[66]] + [preds[62]] + [preds[70]] +[preds[69]] + [preds[57]] + [preds[60]] + [preds[54]] + [preds[65]],
-                 'nose': preds[76:81] + preds[85:81:-1] + [preds[86]] + preds[74:72:-1] + [preds[81]] + [preds[72]] + [preds[75]],
-                 'left_eye': [preds[88]] + [preds[87]] + [preds[90]] + [preds[89]] + [preds[95]] + [preds[94]] + [preds[96]] + [preds[93]] + [preds[91]] + [preds[92]],
-                 'left_eyebrow': preds[101:96:-1] + preds[102:]
-                 }
-    return new_preds
-
-
 def detect_3D(im_path, bbox=None):
     cfg = yaml.load(open('source/configs/mb1_120x120.yml'), Loader=yaml.SafeLoader)
     os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
@@ -121,14 +104,55 @@ def detect_3D(im_path, bbox=None):
     img = cv2.imread(im_path)
     param_lst, roi_box_lst = tddfa(img, [bbox])
     preds = tddfa.recon_vers(param_lst, roi_box_lst, dense_flag=False)
-    preds = preds[0][:2].T
-    new_preds = {'jaw_line': preds[:17],
-                 'right_eye': preds[36:42],
-                 'right_eyebrow': preds[17:22],
-                 'mouth': preds[49:],
-                 'nose': preds[27:36],
-                 'left_eye': preds[42:48],
-                 'left_eyebrow': preds[22:27]
-                 }
-    # TODO calibrate with the previous 2D mask
-    return new_preds
+    preds = preds[0].T
+    return preds
+
+
+def best_fit_transform(A, B):
+    assert A.shape == B.shape
+    m = A.shape[1]
+    centroid_A = np.mean(A, axis=0)
+    centroid_B = np.mean(B, axis=0)
+    AA = A - centroid_A
+    BB = B - centroid_B
+    H = np.dot(AA.T, BB)
+    U, S, Vt = np.linalg.svd(H)
+    R = np.dot(Vt.T, U.T)
+    if np.linalg.det(R) < 0:
+        Vt[m - 1, :] *= -1
+        R = np.dot(Vt.T, U.T)
+    t = centroid_B.T - np.dot(R, centroid_A.T)
+    T = np.identity(m + 1)
+    T[:m, :m] = R
+    T[:m, m] = t
+    return T
+
+
+def nearest_neighbor(src, dst):
+    assert src.shape == dst.shape
+    neigh = NearestNeighbors(n_neighbors=1)
+    neigh.fit(dst)
+    distances, indices = neigh.kneighbors(src, return_distance=True)
+    return distances.ravel(), indices.ravel()
+
+
+def icp(A, B, init_pose=None, max_iterations=20, tolerance=0.001):
+    assert A.shape == B.shape
+    m = A.shape[1]
+    src = np.ones((m+1,A.shape[0]))
+    dst = np.ones((m+1,B.shape[0]))
+    src[:m,:] = np.copy(A.T)
+    dst[:m,:] = np.copy(B.T)
+    if init_pose is not None:
+        src = np.dot(init_pose, src)
+    prev_error = 0
+    for i in range(max_iterations):
+        distances, indices = nearest_neighbor(src[:m,:].T, dst[:m,:].T)
+        T = best_fit_transform(src[:m,:].T, dst[:m,:].T)
+        src = np.dot(T, src)
+        mean_error = np.mean(distances)
+        if np.abs(prev_error - mean_error) < tolerance:
+            break
+        prev_error = mean_error
+    T = best_fit_transform(A, src[:m,:].T)
+    return T

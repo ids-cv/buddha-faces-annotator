@@ -1,5 +1,6 @@
 # data directory
 data/
+annotations/
 
 # pycharm things
 .idea/

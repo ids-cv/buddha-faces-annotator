@@ -128,7 +128,7 @@ def draw_landmarks(img, pts, style='fancy', wfp=None, show_flag=False, **kwargs)
             alpha = 0.8
             markersize = 4
             lw = 1.5
-            color = kwargs.get('color', 'w')
+            color = 'r' if i == 0 else kwargs.get('color', 'w')
             markeredgecolor = kwargs.get('markeredgecolor', 'black')
 
             nums = [0, 17, 22, 27, 31, 36, 42, 48, 60, 68]
@@ -150,7 +150,6 @@ def draw_landmarks(img, pts, style='fancy', wfp=None, show_flag=False, **kwargs)
                          markeredgecolor=markeredgecolor, alpha=alpha)
     if wfp is not None:
         plt.savefig(wfp, dpi=150)
-        print(f'Save visualization result to {wfp}')
 
     if show_flag:
         plt.show()
@@ -179,4 +178,3 @@ def cv_draw_landmark(img_ori, pts, box=None, color=GREEN, size=1):
         cv2.line(img, left_bottom, left_top, BLUE, 1, cv2.LINE_AA)
 
     return img
-    
