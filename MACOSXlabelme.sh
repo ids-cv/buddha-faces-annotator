@@ -9,11 +9,7 @@ conda deactivate
 conda activate labelme || { #except
   conda create --name=labelme python=3.6 -y
   conda activate labelme
-  pip install labelme
-  pip install mxnet
-  pip install opencv-python-headless
-  pip install tqdm
-  pip install scikit-image
+  pip install -r source/requirements.txt
 }
 
 python3 source/__main__.py

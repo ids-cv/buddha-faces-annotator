@@ -35,16 +35,6 @@ from labelme.widgets import UniqueLabelQListWidget
 from labelme.widgets import ZoomWidget
 from landmarks_detect import detect_3D, icp
 
-# FIXME
-# - [medium] Set max zoom value to something big enough for FitWidth/Window
-
-# TODO(unknown):
-# - [high] Add polygon movement with arrow keys
-# - [high] Deselect shape when clicking and already selected(?)
-# - [low,maybe] Preview images on file dialogs.
-# - Zoom is too "steppy".
-
-
 LABEL_COLORMAP = imgviz.label_colormap(value=200)
 
 
@@ -69,18 +59,9 @@ def ldk_on_im(ldk, mean, max, trans, inv=False):
 class MainWindow(QtWidgets.QMainWindow):
     FIT_WINDOW, FIT_WIDTH, MANUAL_ZOOM = 0, 1, 2
 
-    def __init__(
-            self,
-            config=None,
-            filename=None,
-            output=None,
-            output_file=None,
-            output_dir=None,
-    ):
+    def __init__(self, config=None, filename=None, output=None, output_file=None, output_dir=None):
         if output is not None:
-            logger.warning(
-                "argument output is deprecated, use output_file instead"
-            )
+            logger.warning("argument output is deprecated, use output_file instead")
             if output_file is None:
                 output_file = output
 
@@ -167,9 +148,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.fileSearch.setPlaceholderText(self.tr("Search Filename"))
         self.fileSearch.textChanged.connect(self.fileSearchChanged)
         self.fileListWidget = QtWidgets.QListWidget()
-        self.fileListWidget.itemSelectionChanged.connect(
-            self.fileSelectionChanged
-        )
+        self.fileListWidget.itemSelectionChanged.connect(self.fileSelectionChanged)
         fileListLayout = QtWidgets.QVBoxLayout()
         fileListLayout.setContentsMargins(0, 0, 0, 0)
         fileListLayout.setSpacing(0)
@@ -246,22 +225,6 @@ class MainWindow(QtWidgets.QMainWindow):
             shortcuts["open_dir"],
             "open",
             self.tr(u"Open Dir"),
-        )
-        openNextImg = action(
-            self.tr("&Next Image"),
-            self.openNextImg,
-            shortcuts["open_next"],
-            "next",
-            self.tr(u"Open next (hold Ctl+Shift to copy labels)"),
-            enabled=False,
-        )
-        openPrevImg = action(
-            self.tr("&Prev Image"),
-            self.openPrevImg,
-            shortcuts["open_prev"],
-            "prev",
-            self.tr(u"Open prev (hold Ctl+Shift to copy labels)"),
-            enabled=False,
         )
         save = action(
             self.tr("&Save"),
@@ -560,8 +523,6 @@ class MainWindow(QtWidgets.QMainWindow):
             fitWidth=fitWidth,
             brightnessContrast=brightnessContrast,
             zoomActions=zoomActions,
-            openNextImg=openNextImg,
-            openPrevImg=openPrevImg,
             fileMenuActions=(open_, opendir, save, saveAs, close, quit),
             tool=(),
             # XXX: need to add some actions here to activate the shortcut
@@ -607,8 +568,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.menus.file,
             (
                 open_,
-                openNextImg,
-                openPrevImg,
                 opendir,
                 self.menus.recentFiles,
                 save,
@@ -663,8 +622,6 @@ class MainWindow(QtWidgets.QMainWindow):
         # Menu buttons on Left
         self.actions.tool = (
             opendir,
-            openNextImg,
-            openPrevImg,
             save,
             deleteFile,
             None,
@@ -740,30 +697,31 @@ class MainWindow(QtWidgets.QMainWindow):
         self.populateModeActions()
 
         self.avg_model = None
-        self.ref_pred = None
         self.hand_updates = np.zeros((68, 3))
         self.norm_preds_dict = {}  # self.filename:[ldks, mean, max]
 
-    def update_model(self):
-        if len(self.norm_preds_dict) == 0:
+    def update_avg(self):
+        if len(self.norm_preds_dict) == 0:  # if last preds has been removed
             self.avg_model = None
-            self.ref_pred = None
             self.hand_updates = np.zeros((68, 3))
             return
         list_norm_preds = []
         for key in self.norm_preds_dict:
             list_norm_preds.append(self.norm_preds_dict[key])
-            self.ref_pred = key
-        dst = list_norm_preds.pop(-1)
-        to_draw = [revert_norm(dst[0], dst[1], dst[2]).T]
+        dst = list_norm_preds.pop(0)
+        if self.avg_model is not None:
+            T = icp(self.avg_model, dst[0])
+            if np.sum(np.abs(np.identity(4) - T)) - 4 > 1e-10:
+                self.hand_updates = ldk_on_im(self.hand_updates, np.zeros((68, 3)), 1, T)
+        to_draw = [dst[0].T]
         for src in list_norm_preds:
             T = icp(dst[0], src[0])
-            ldk_proj = ldk_on_im(src[0], dst[1], dst[2], T)
+            ldk_proj = ldk_on_im(src[0], np.zeros((3,)), 1, T)
             to_draw.append(ldk_proj.T)
-        self.avg_model = normalize(np.mean(np.array(to_draw), axis=0).T)[0]
+        self.avg_model = np.mean(np.array(to_draw), axis=0).T
 
     def update_from_shapes(self):
-        if len(self.labelList) == 0 or (self.filename not in self.norm_preds_dict):
+        if self.filename not in self.norm_preds_dict or len(self.labelList) == 0:
             return
         labels = {}
         for item in self.labelList:
@@ -774,15 +732,19 @@ class MainWindow(QtWidgets.QMainWindow):
                             labels['right_eye'] + labels['left_eye'] + labels['mouth'])
         src = self.norm_preds_dict[self.filename]
         T = icp(self.avg_model, src[0])
-        updates = np.zeros((68, 3))
-        updates[:, :2] = points - ldk_on_im(self.avg_model, src[1], src[2], T, True)[:, :2]
-        self.hand_updates = ldk_on_im(updates, np.zeros((3,)), 1 / src[2], T)
+        updates = points - ldk_on_im(self.avg_model, src[1], src[2], T, True)[:, :2]
+        tmp = ldk_on_im(self.hand_updates, np.zeros((3,)), src[2], T, True)
+        tmp[:, :2] = updates
+        self.hand_updates = ldk_on_im(tmp, np.zeros((3,)), 1 / src[2], T)
+        np.where(self.hand_updates < 1e-5, 0, self.hand_updates)
 
     def view_from_model(self):
+        if self.filename not in self.norm_preds_dict:
+            return []
         src = self.norm_preds_dict[self.filename]
+        T = icp(src[0], self.avg_model)
         model3d = self.avg_model + self.hand_updates
-        T = icp(model3d, src[0])
-        view = ldk_on_im(model3d, src[1], src[2], T, True)[:, :2]
+        view = ldk_on_im(model3d, src[1], src[2], T)[:, :2]
         view = {'jaw_line': view[:17],
                 'right_eye': view[36:42],
                 'right_eyebrow': view[17:22],
@@ -810,6 +772,8 @@ class MainWindow(QtWidgets.QMainWindow):
         return shapes
 
     def write_artifact_json(self):
+        if self.filename is None:
+            return
         path = ''
         for tk in self.filename.split('/')[:-4]:
             os.path.join(path, tk)
@@ -819,17 +783,31 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.avg_model is None:
             return
         with open(os.path.join(path, self.filename.split('/')[-2] + '.json'), 'w+') as f:
-            data = {}
-            data['artifact_id'] = self.filename.split('/')[-2].split('_')[-1]
-            data['avg_model'] = self.avg_model.tolist()
-            data['hand_updates'] = self.hand_updates.tolist()
-            data['ref_preds'] = self.ref_pred
+            data = {'artifact_id': self.filename.split('/')[-2].split('_')[-1], 'avg_model': self.avg_model.tolist(),
+                    'hand_updates': self.hand_updates.tolist()}
             norm_preds_dict = {}
             for key in self.norm_preds_dict:
                 preds, mean, max = self.norm_preds_dict[key]
                 norm_preds_dict[key] = (preds.tolist(), mean.tolist(), float(max))
             data['norm_preds_dict'] = norm_preds_dict
             json.dump(data, f)
+
+    def load_artifact_json(self, target_artifact_dir):
+        path = ''
+        for tk in target_artifact_dir.split('/')[:-3]:
+            os.path.join(path, tk)
+        path = os.path.join(path, 'annotations')
+        file = os.path.join(path, target_artifact_dir.split('/')[-1] + '.json')
+        if not os.path.exists(path) or not os.path.exists(file):
+            return
+        with open(file) as f:
+            data = json.load(f)
+            self.avg_model = np.asarray(data['avg_model'])
+            self.hand_updates = np.asarray(data['hand_updates'])
+            self.norm_preds_dict = data['norm_preds_dict']
+            for key in self.norm_preds_dict:
+                preds, mean, max = self.norm_preds_dict[key]
+                self.norm_preds_dict[key] = (np.asarray(preds), np.asarray(mean), max)
 
     # self.firstStart = True
     # if self.firstStart:
@@ -1068,7 +1046,6 @@ class MainWindow(QtWidgets.QMainWindow):
         if currIndex < len(self.imageList):
             filename = self.imageList[currIndex]
             if filename:
-                self.update_from_shapes()
                 if not self.image.isNull():
                     self.saveFile()
                 self.loadFile(filename)
@@ -1217,9 +1194,6 @@ class MainWindow(QtWidgets.QMainWindow):
             imageData = self.imageData if self._config["store_data"] else None
             if osp.dirname(filename) and not osp.exists(osp.dirname(filename)):
                 os.makedirs(osp.dirname(filename))
-            if self.filename in self.norm_preds_dict:
-                points, mean, max = self.norm_preds_dict[self.filename]
-                self.otherData = {'model': [points.tolist(), mean.tolist(), float(max)]}
             lf.save(
                 filename=filename,
                 shapes=shapes,
@@ -1305,7 +1279,8 @@ class MainWindow(QtWidgets.QMainWindow):
             rect = shape.boundingRect()
             preds = detect_3D(self.imagePath, rect.getCoords())
             self.norm_preds_dict[self.filename] = normalize(preds)
-            self.update_model()
+            self.update_avg()
+            self.write_artifact_json()
             shapes = self.view_from_model()
             self.loadLabels(shapes)
             self.actions.editMode.setEnabled(True)
@@ -1416,6 +1391,9 @@ class MainWindow(QtWidgets.QMainWindow):
     def loadFile(self, filename=None):
         """Load the specified file, or the last opened file if None."""
         # changing fileListWidget loads file
+        if not (filename == self.filename):
+            self.update_from_shapes()
+            self.write_artifact_json()
         if filename in self.imageList and (
                 self.fileListWidget.currentRow() != self.imageList.index(filename)
         ):
@@ -1489,9 +1467,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.canvas.loadPixmap(QtGui.QPixmap.fromImage(image))
         flags = {k: False for k in self._config["flags"] or []}
         if self.labelFile:
-            points, mean, max = self.labelFile.otherData['model']
-            self.norm_preds_dict[self.filename] = (np.asarray(points), np.asarray(mean), max)
-            self.update_model()
             shapes = self.view_from_model()
             self.loadLabels(shapes)
             if self.labelFile.flags is not None:
@@ -1645,9 +1620,6 @@ class MainWindow(QtWidgets.QMainWindow):
         if currIndex - 1 >= 0:
             filename = self.imageList[currIndex - 1]
             if filename:
-                self.update_from_shapes()
-                if not self.image.isNull():
-                    self.saveFile()
                 self.loadFile(filename)
 
         self._config["keep_prev"] = keep_prev
@@ -1675,9 +1647,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.filename = filename
 
         if self.filename and load:
-            self.update_from_shapes()
-            if not self.image.isNull():
-                self.saveFile()
             self.loadFile(self.filename)
 
         self._config["keep_prev"] = keep_prev
@@ -1751,6 +1720,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self._saveFile(self.output_file)
             self.close()
         else:
+            return
             self._saveFile(self.saveFileDialog())
 
     def saveFileAs(self, _value=False):
@@ -1826,22 +1796,9 @@ class MainWindow(QtWidgets.QMainWindow):
         label_file = self.getLabelFile()
         if osp.exists(label_file):
             os.remove(label_file)
-            try:
-                if self.filename == self.ref_pred:
-                    if len(self.norm_preds_dict) == 1:
-                        self.ref_pred = None
-                        self.hand_updates = np.zeros((68, 3))
-                    else:
-                        prev_preds = self.norm_preds_dict.pop(self.filename)
-                        for key in self.norm_preds_dict:
-                            self.ref_pred = key
-                        T = icp(prev_preds[0], self.norm_preds_dict[self.ref_pred])
-                        self.hand_updates = ldk_on_im(self.hand_updates, np.zeros((3,)), 1, T)
-                else:
-                    self.norm_preds_dict.pop(self.filename)
-                    self.update_model()
-            except:
-                pass
+            self.norm_preds_dict.pop(self.filename)
+            self.update_avg()
+            self.write_artifact_json()
             logger.info("Label file is removed: {}".format(label_file))
 
             item = self.fileListWidget.currentItem()
@@ -1913,11 +1870,9 @@ class MainWindow(QtWidgets.QMainWindow):
         if not self.mayContinue():
             return
         if self.filename is not None:
-            self.update_model()
-            self.saveFile()
+            self.update_from_shapes()
             self.write_artifact_json()
             self.avg_model = None
-            self.ref_pred = None
             self.hand_updates = np.zeros((68, 3))
             self.norm_preds_dict = {}
 
@@ -1931,11 +1886,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 | QtWidgets.QFileDialog.DontResolveSymlinks,
             )
         )
-        # folder = targetDirPath.split('/')[-1]
-        # if folder.split('_')[0] == 'artifact':
-        # 	newPath = os.path.join('data', targetDirPath.split('/')[-2],'done_' + folder)
-        # 	os.rename(targetDirPath, newPath)
-        # 	targetDirPath = newPath
         self.importDirImages(targetDirPath)
 
     @property
@@ -1970,15 +1920,11 @@ class MainWindow(QtWidgets.QMainWindow):
                 item.setCheckState(Qt.Unchecked)
             self.fileListWidget.addItem(item)
 
-        if len(self.imageList) > 1:
-            self.actions.openNextImg.setEnabled(True)
-            self.actions.openPrevImg.setEnabled(True)
 
         self.openNextImg()
 
     def importDirImages(self, dirpath, pattern=None, load=True):
-        self.actions.openNextImg.setEnabled(True)
-        self.actions.openPrevImg.setEnabled(True)
+
 
         if not self.mayContinue() or not dirpath:
             return
@@ -1995,13 +1941,12 @@ class MainWindow(QtWidgets.QMainWindow):
                 label_file = osp.join(self.output_dir, label_file_without_path)
             item = QtWidgets.QListWidgetItem(filename)
             item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
-            if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(
-                    label_file
-            ):
+            if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(label_file):
                 item.setCheckState(Qt.Checked)
             else:
                 item.setCheckState(Qt.Unchecked)
             self.fileListWidget.addItem(item)
+        self.load_artifact_json(dirpath)
         self.openNextImg(load=load)
 
     def scanAllImages(self, folderPath):

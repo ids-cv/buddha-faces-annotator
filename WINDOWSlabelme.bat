@@ -15,11 +15,7 @@ CALL conda activate labelme
 IF %ERRORLEVEL% EQU 0 goto App
 CALL conda create --name=labelme python=3.6 -y
 CALL conda activate labelme
-CALL pip install labelme
-CALL pip install mxnet
-CALL pip install opencv-python-headless
-CALL pip install tqdm
-CALL pip install scikit-image
+CALL pip install -r source/requirements.txt
 
 :App
 CALL python source/__main__.py
