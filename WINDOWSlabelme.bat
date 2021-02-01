@@ -18,6 +18,6 @@ CALL conda activate labelme
 CALL pip install -r source/requirements.txt
 
 :App
-CALL python source/__main__.py
+CALL python source/__main__.py --autosave
 
 CALL conda deactivate

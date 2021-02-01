@@ -1762,7 +1762,6 @@ class MainWindow(QtWidgets.QMainWindow):
         return filename
 
     def _saveFile(self, filename):
-        print(filename)
         if filename and self.saveLabels(filename):
             self.addRecentFile(filename)
             self.setClean()
