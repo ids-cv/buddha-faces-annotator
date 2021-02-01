@@ -774,12 +774,12 @@ class MainWindow(QtWidgets.QMainWindow):
     def write_artifact_json(self):
         if self.filename is None:
             return
-        path = './' + 'annotations'
+        path = os.path.join('.', 'annotations')
         if not os.path.exists(path):
             os.mkdir(path)
         if self.avg_model is None:
             return
-        with open(os.path.join(path, self.filename.split('/')[-2] + '.json'), 'w+') as f:
+        with open(os.path.join(path, self.filename.split('/')[-1] + '.json'), 'w+') as f:
             data = {'artifact_id': self.filename.split('/')[-2].split('_')[-1], 'avg_model': self.avg_model.tolist(),
                     'hand_updates': self.hand_updates.tolist()}
             norm_preds_dict = {}
