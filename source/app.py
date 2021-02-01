@@ -774,10 +774,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def write_artifact_json(self):
         if self.filename is None:
             return
-        path = ''
-        for tk in self.filename.split('/')[:-4]:
-            os.path.join(path, tk)
-        path = os.path.join(path, 'annotations')
+        path = './' + 'annotations'
         if not os.path.exists(path):
             os.mkdir(path)
         if self.avg_model is None:
@@ -793,10 +790,7 @@ class MainWindow(QtWidgets.QMainWindow):
             json.dump(data, f)
 
     def load_artifact_json(self, target_artifact_dir):
-        path = ''
-        for tk in target_artifact_dir.split('/')[:-3]:
-            os.path.join(path, tk)
-        path = os.path.join(path, 'annotations')
+        path = os.path.join('.', 'annotations')
         file = os.path.join(path, target_artifact_dir.split('/')[-1] + '.json')
         if not os.path.exists(path) or not os.path.exists(file):
             return
@@ -1659,15 +1653,9 @@ class MainWindow(QtWidgets.QMainWindow):
             "*.{}".format(fmt.data().decode())
             for fmt in QtGui.QImageReader.supportedImageFormats()
         ]
-        filters = self.tr("Image & Label files (%s)") % " ".join(
-            formats + ["*%s" % LabelFile.suffix]
-        )
+        filters = self.tr("Image & Label files (%s)") % " ".join(formats + ["*%s" % LabelFile.suffix])
         filename = QtWidgets.QFileDialog.getOpenFileName(
-            self,
-            self.tr("%s - Choose Image or Label file") % __appname__,
-            path,
-            filters,
-        )
+            self, self.tr("%s - Choose Image or Label file") % __appname__, path, filters,)
         if QT5:
             filename, _ = filename
         filename = str(filename)
@@ -1681,13 +1669,9 @@ class MainWindow(QtWidgets.QMainWindow):
         if default_output_dir is None:
             default_output_dir = self.currentPath()
 
-        output_dir = QtWidgets.QFileDialog.getExistingDirectory(
-            self,
-            self.tr("%s - Save/Load Annotations in Directory") % __appname__,
-            default_output_dir,
-            QtWidgets.QFileDialog.ShowDirsOnly
-            | QtWidgets.QFileDialog.DontResolveSymlinks,
-        )
+        output_dir = QtWidgets.QFileDialog.getExistingDirectory(self,
+            self.tr("%s - Save/Load Annotations in Directory") % __appname__, default_output_dir,
+            QtWidgets.QFileDialog.ShowDirsOnly | QtWidgets.QFileDialog.DontResolveSymlinks,)
         output_dir = str(output_dir)
 
         if not output_dir:
@@ -1721,7 +1705,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.close()
         else:
             return
-            self._saveFile(self.saveFileDialog())
 
     def saveFileAs(self, _value=False):
         assert not self.image.isNull(), "cannot save empty image"
@@ -1762,7 +1745,6 @@ class MainWindow(QtWidgets.QMainWindow):
         return filename
 
     def _saveFile(self, filename):
-        print(filename)
         if filename and self.saveLabels(filename):
             self.addRecentFile(filename)
             self.setClean()

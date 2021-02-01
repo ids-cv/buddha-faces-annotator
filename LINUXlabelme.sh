@@ -15,6 +15,6 @@ conda activate labelme || { #except
   pip install -r source/requirements.txt
 }
 
-python3 source/__main__.py
+python3 source/__main__.py --autosave
 
 conda deactivate
