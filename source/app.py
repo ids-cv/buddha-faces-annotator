@@ -1721,7 +1721,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.close()
         else:
             return
-            self._saveFile(self.saveFileDialog())
 
     def saveFileAs(self, _value=False):
         assert not self.image.isNull(), "cannot save empty image"
