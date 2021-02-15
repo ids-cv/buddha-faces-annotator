@@ -4,6 +4,7 @@ import functools
 import math
 import os
 import os.path as osp
+import posixpath
 import re
 import webbrowser
 import numpy as np
@@ -779,8 +780,9 @@ class MainWindow(QtWidgets.QMainWindow):
             os.mkdir(path)
         if self.avg_model is None:
             return
-        with open(os.path.join(path, self.filename.split('/')[-1] + '.json'), 'w+') as f:
-            data = {'artifact_id': self.filename.split('/')[-2].split('_')[-1], 'avg_model': self.avg_model.tolist(),
+        art_id = self.filename.replace('\\', posixpath.sep).split(posixpath.sep)[-2]
+        with open(os.path.join(path, art_id + '.json'), 'w+') as f:
+            data = {'artifact_id': art_id, 'avg_model': self.avg_model.tolist(),
                     'hand_updates': self.hand_updates.tolist()}
             norm_preds_dict = {}
             for key in self.norm_preds_dict:
@@ -791,7 +793,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def load_artifact_json(self, target_artifact_dir):
         path = os.path.join('.', 'annotations')
-        file = os.path.join(path, target_artifact_dir.split('/')[-1] + '.json')
+        file = os.path.join(path, target_artifact_dir.split(os.path.sep)[-1] + '.json')
         if not os.path.exists(path) or not os.path.exists(file):
             return
         with open(file) as f:

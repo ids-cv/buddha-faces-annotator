@@ -25,14 +25,10 @@ It will be used for you to send your annotations.
 Then depending on your Operating System:
 
 -   For Windows:
-
-    a.  Click “File” -&gt; “Open Windows Powershell”
         
-    b.  Copy or type: ./WINDOWSlabelme.bat
+    a.  Double-click the file "WINDOWSlabelme.bat"
         
-    c.  Then press Enter
-        
-    d.  You might be asked to press [y] and Enter a couple of times
+    b.  You might be asked to press [y] and Enter a couple of times
         the first time you open the project, please do so
 
 
