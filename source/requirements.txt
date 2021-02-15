@@ -1,8 +1,5 @@
 labelme
-mxnet
 opencv-python-headless
 tqdm
-scikit-image
-scikit-learn
 onnxruntime
 torch

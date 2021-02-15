@@ -25,7 +25,7 @@ from labelme.config import get_config
 from labelme.label_file import LabelFile
 from labelme.label_file import LabelFileError
 from labelme.logger import logger
-from labelme.shape import Shape
+from shape import Shape
 from labelme.widgets import BrightnessContrastDialog
 from labelme.widgets import Canvas
 from labelme.widgets import LabelDialog
@@ -74,18 +74,10 @@ class MainWindow(QtWidgets.QMainWindow):
         # set default shape colors
         Shape.line_color = QtGui.QColor(*self._config["shape"]["line_color"])
         Shape.fill_color = QtGui.QColor(*self._config["shape"]["fill_color"])
-        Shape.select_line_color = QtGui.QColor(
-            *self._config["shape"]["select_line_color"]
-        )
-        Shape.select_fill_color = QtGui.QColor(
-            *self._config["shape"]["select_fill_color"]
-        )
-        Shape.vertex_fill_color = QtGui.QColor(
-            *self._config["shape"]["vertex_fill_color"]
-        )
-        Shape.hvertex_fill_color = QtGui.QColor(
-            *self._config["shape"]["hvertex_fill_color"]
-        )
+        Shape.select_line_color = QtGui.QColor(*self._config["shape"]["select_line_color"])
+        Shape.select_fill_color = QtGui.QColor(*self._config["shape"]["select_fill_color"])
+        Shape.vertex_fill_color = QtGui.QColor(*self._config["shape"]["vertex_fill_color"])
+        Shape.hvertex_fill_color = QtGui.QColor(*self._config["shape"]["hvertex_fill_color"])
 
         super(MainWindow, self).__init__()
         self.setWindowTitle(__appname__)
