@@ -1,16 +1,14 @@
 仏顔のアノテーションのやり方
 =========================
 
-Purpose
+目的
 =======
 
-このアノテーションでは、仏像の顔のランドマーク点（顔輪郭目鼻口など）の自動抽出のためのデータを作成していただきます。
-This annotation aims to refine already existing facial landmarks, to make them specifically efficient for facial 
-landmarks detection on Buddha statues.\
-You will be provided an application modified by Hugo to refine the landmarks that can be already detected.
+このアノテーションでは、仏像の顔のランドマーク点（顔輪郭目鼻口など）の自動抽出のためのデータを作成していただきます。同じ仏像に対して、何枚かの画像でランドマーク点をつけることで、3次元の点の位置を求めることができるようになります。顔を囲む矩形を与えることでランドマーク点の大体の位置が与えられますが、この大体の位置から一番適切と思われる位置に修正してください。
 
-Set up
+
 ======
+
 
 You will find the project in a Google Drive folder at this link:
 
