@@ -46,19 +46,9 @@ Then depending on your Operating System:
 
 -   For MacOSX:
 
-    a.  Right click the file MacOSXlabelme.sh
+    a.  Double-click the "MACOSXlabelme.command"
     
-    b.  Click “Open with” and then “Other…”
-    
-    c.  Click “All Applications” and select “Terminal”
-    
-    d.  Make sure “Always Open With” is not checked
-    
-    e.  Validate with “OK”
-    
-    f.  Then double-click the file MacOSX.sh
-    
-    g.  You might be asked to press [y] and Enter a couple of times the
+    b.  You might be asked to press [y] and Enter a couple of times the
         first time you open the project, please do so
 
 

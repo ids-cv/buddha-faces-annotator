@@ -1,5 +1,5 @@
 labelme
 opencv-python-headless
 tqdm
-onnxruntime
+onnxruntime==1.4.0
 torch
