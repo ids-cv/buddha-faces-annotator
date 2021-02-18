@@ -692,6 +692,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.avg_model = None
         self.hand_updates = np.zeros((68, 3))
         self.norm_preds_dict = {}  # self.filename:[ldks, mean, max]
+        self.bb_dict = {}
 
     def update_avg(self):
         if len(self.norm_preds_dict) == 0:  # if last preds has been removed
@@ -779,7 +780,8 @@ class MainWindow(QtWidgets.QMainWindow):
             norm_preds_dict = {}
             for key in self.norm_preds_dict:
                 preds, mean, max = self.norm_preds_dict[key]
-                norm_preds_dict[key] = (preds.tolist(), mean.tolist(), float(max))
+                bbox = self.bb_dict[key]
+                norm_preds_dict[key] = (preds.tolist(), mean.tolist(), float(max), float(bbox))
             data['norm_preds_dict'] = norm_preds_dict
             json.dump(data, f)
 
@@ -794,8 +796,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.hand_updates = np.asarray(data['hand_updates'])
             self.norm_preds_dict = data['norm_preds_dict']
             for key in self.norm_preds_dict:
-                preds, mean, max = self.norm_preds_dict[key]
+                preds, mean, max, bbox = self.norm_preds_dict[key]
                 self.norm_preds_dict[key] = (np.asarray(preds), np.asarray(mean), max)
+                self.bb_dict[key] = bbox
 
     # self.firstStart = True
     # if self.firstStart:
@@ -1267,6 +1270,7 @@ class MainWindow(QtWidgets.QMainWindow):
             rect = shape.boundingRect()
             preds = detect_3D(self.imagePath, rect.getCoords())
             self.norm_preds_dict[self.filename] = normalize(preds)
+            self.bb_dict[self.filename] = rect.getCoords()
             self.update_avg()
             self.write_artifact_json()
             shapes = self.view_from_model()
@@ -1774,6 +1778,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if osp.exists(label_file):
             os.remove(label_file)
             self.norm_preds_dict.pop(self.filename)
+            self.bb_dict.pop(self.filename)
             self.update_avg()
             self.write_artifact_json()
             logger.info("Label file is removed: {}".format(label_file))
@@ -1852,6 +1857,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.avg_model = None
             self.hand_updates = np.zeros((68, 3))
             self.norm_preds_dict = {}
+            self.bb_dict = {}
 
         defaultOpenDirPath = 'data'
         targetDirPath = str(
