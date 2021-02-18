@@ -781,7 +781,7 @@ class MainWindow(QtWidgets.QMainWindow):
             for key in self.norm_preds_dict:
                 preds, mean, max = self.norm_preds_dict[key]
                 bbox = self.bb_dict[key]
-                norm_preds_dict[key] = (preds.tolist(), mean.tolist(), float(max), float(bbox))
+                norm_preds_dict[key] = (preds.tolist(), mean.tolist(), float(max), bbox)
             data['norm_preds_dict'] = norm_preds_dict
             json.dump(data, f)
 
