@@ -773,7 +773,7 @@ class MainWindow(QtWidgets.QMainWindow):
             os.mkdir(path)
         if self.avg_model is None:
             return
-        art_id = self.filename.replace('\\', posixpath.sep).split(posixpath.sep)[-2]
+        art_id = self.filename.replace(os.path.sep, posixpath.sep).split(posixpath.sep)[-2]
         with open(os.path.join(path, art_id + '.json'), 'w+') as f:
             data = {'artifact_id': art_id, 'avg_model': self.avg_model.tolist(),
                     'hand_updates': self.hand_updates.tolist()}
