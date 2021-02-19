@@ -786,8 +786,9 @@ class MainWindow(QtWidgets.QMainWindow):
             json.dump(data, f)
 
     def load_artifact_json(self, target_artifact_dir):
+        target_artifact_dir = target_artifact_dir.replace(os.path.sep, posixpath.sep)
         path = os.path.join('.', 'annotations')
-        file = os.path.join(path, target_artifact_dir.split(os.path.sep)[-1] + '.json')
+        file = os.path.join(path, target_artifact_dir.split(posixpath.sep)[-1] + '.json')
         if not os.path.exists(path) or not os.path.exists(file):
             return
         with open(file) as f:
@@ -1907,8 +1908,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.openNextImg()
 
     def importDirImages(self, dirpath, pattern=None, load=True):
-
-
         if not self.mayContinue() or not dirpath:
             return
 
