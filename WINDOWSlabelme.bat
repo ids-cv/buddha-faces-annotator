@@ -11,8 +11,7 @@ CALL conda.bat activate
 CALL conda update conda -y
 
 CALL conda deactivate
-CALL conda activate labelme
-IF %ERRORLEVEL% EQU 0 goto App
+CALL conda env remove --name labelme
 CALL conda create --name=labelme python=3.6 -y
 CALL conda activate labelme
 CALL pip install -r source/requirements.txt
