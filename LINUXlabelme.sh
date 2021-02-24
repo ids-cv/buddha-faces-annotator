@@ -2,7 +2,7 @@
 
 conda -V || { #except
   sudo ./source/Miniconda_insatllers/Miniconda3-latest-Linux-x86.sh -b -p
-  source $HOME/miniconda/bin/activate
+  source $HOME/miniconda3/bin/activate
   conda init
   conda update conda -y
 }
