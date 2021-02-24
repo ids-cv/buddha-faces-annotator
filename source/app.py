@@ -800,6 +800,8 @@ class MainWindow(QtWidgets.QMainWindow):
         path = os.path.join('.', 'annotations')
         file = os.path.join(path, target_artifact_dir.split(posixpath.sep)[-1] + '.json')
         if not os.path.exists(path) or not os.path.exists(file):
+            print("\n\n Annotation file not found:")
+            print(file, "\n\n")
             return
         with open(file) as f:
             data = json.load(f)
@@ -1485,6 +1487,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.canvas.loadPixmap(QtGui.QPixmap.fromImage(image))
         flags = {k: False for k in self._config["flags"] or []}
         if self.labelFile:
+            print("Known annotations:", self.norm_preds_dict.keys())
             shapes = self.view_from_model()
             self.loadLabels(shapes)
             if self.labelFile.flags is not None:
