@@ -305,7 +305,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.tr("Move and edit the selected polygons"),
             enabled=False,
         )
-
         delete = action(
             self.tr("Delete Polygons"),
             self.deleteSelectedShape,
@@ -313,6 +312,13 @@ class MainWindow(QtWidgets.QMainWindow):
             "cancel",
             self.tr("Delete the selected polygons"),
             enabled=False,
+        )
+        delete_modif = action(
+            self.tr("&Delete Modifications"),
+            self.deleteHandModif,
+            shortcuts["delete_file"],
+            "delete",
+            self.tr("Delete the hand modifications on the entire artifact"),
         )
         copy = action(
             self.tr("Duplicate Polygons"),
@@ -500,6 +506,7 @@ class MainWindow(QtWidgets.QMainWindow):
             deleteFile=deleteFile,
             toggleKeepPrevMode=toggle_keep_prev_mode,
             delete=delete,
+            delete_modif=delete_modif,
             edit=edit,
             copy=copy,
             undoLastPoint=undoLastPoint,
@@ -523,6 +530,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 edit,
                 copy,
                 delete,
+                delete_modif,
                 None,
                 undo,
                 undoLastPoint,
@@ -570,6 +578,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 saveWithImageData,
                 close,
                 deleteFile,
+                delete_modif,
                 None,
                 quit,
             ),
@@ -617,6 +626,7 @@ class MainWindow(QtWidgets.QMainWindow):
             opendir,
             save,
             deleteFile,
+            delete_modif,
             None,
             createRectangleMode,
             editMode,
@@ -800,6 +810,21 @@ class MainWindow(QtWidgets.QMainWindow):
                 preds, mean, max, bbox = self.norm_preds_dict[key]
                 self.norm_preds_dict[key] = (np.asarray(preds), np.asarray(mean), max)
                 self.bb_dict[key] = bbox
+
+    def deleteHandModif(self):
+        if abs(np.sum(self.hand_updates)) > 1e-5:
+            mb = QtWidgets.QMessageBox
+            msg = self.tr(
+                "You are about to permanently delete the manual modifications for this artifact, "
+                "proceed anyway?"
+            )
+            answer = mb.warning(self, self.tr("Attention"), msg, mb.Yes | mb.No)
+            if answer != mb.Yes:
+                return
+
+            self.hand_updates = np.zeros((68, 3))
+            self.resetState()
+
 
     # self.firstStart = True
     # if self.firstStart:
